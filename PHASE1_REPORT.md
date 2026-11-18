@@ -22,17 +22,20 @@ All numbers below are from executed scripts. The source files are listed next to
 | Median GPS-to-route distance | 4.6 m | 4.7 m |
 
 **Key observations**
+
 - **Every trip has its own road network** (90 unique `.arcs` files). All processing is therefore done per trip.
 - Trips are spread **worldwide** (Europe, North America, Asia, …). Each trip gets its own local equirectangular projection in metres, centred on that trip. Error is < 0.1 % at city scale, far below GPS noise.
 - `.route` is an **ordered list of arcs, not one label per GPS row**. Consecutive route arcs connect in 99.9 % of cases.
 - Anomalies: 43 trips are flagged in `anomalies.csv`. They include gaps up to 153,064 s, 1-second jumps > 60 m (GPS spikes), and partial routes. In trips 33 and 54 the route covers only part of the track.
 
 ## 2. Preprocessing & labels (`pathsnap/labels.py`)
+
 - GPS points are sorted by timestamp and projected to metres.
 - **Per-point labels** come from a *monotone dynamic-programming alignment* of GPS points to the route arcs. A point can only move forward along the route, so it can't snap to a parallel street or a later loop.
 - Points more than 75 m from the route get no label (excluded from metrics). That is 2.1 % of train points and 0.05 % of student-test points.
 
 ## 3. Candidates & features (`pathsnap/candidates.py`)
+
 - KD-tree over points sampled every 10 m along each arc. For each GPS point, keep up to **10 arcs within 80 m**.
 - About 8.3 candidates per point. **Candidate miss rate: 1.2 % (train), 0.16 % (student-test).**
 - 20 features per (GPS point, candidate arc):
@@ -68,6 +71,7 @@ All experiments use LightGBM with 5-fold trip-grouped CV on the **training trips
 ![Feature selection](results/feature_selection/feature_selection.png)
 
 **Findings and decision**
+
 - **Direction features are essential.** Without them the model can't separate the two directions of a two-way road (identical geometry), and Top-1 collapses by 27 points.
 - Removing distance features alone costs little, because the temporal-context features also encode distance and are correlated with them. They are still kept, since they are the top-ranked features.
 - `dt_prev` adds nothing (+0.0006, within the ±0.013 fold standard deviation), and `head_cos` duplicates `head_diff`.
@@ -95,6 +99,7 @@ All experiments use LightGBM with 5-fold trip-grouped CV on the **training trips
 **Selected model: LightGBM.** Its CV score is within one standard deviation of Random Forest (±0.010). It has the best student-test Top-1, Macro F1 and log loss, and the best probability quality, which matters for the planned HMM decoder. It also trains about 34× faster than RF.
 
 ## 5. Hyperparameter tuning – Bayesian optimisation (`scripts/04_bayes_opt.py`, `results/bayes/`)
+
 - **Method:** Optuna **TPE** sampler (seed 42, the first 10 trials random), **30 trials**, 25.8 min, 150 model fits.
 - **Objective:** maximise mean 5-fold trip-grouped CV Macro F1 on the training trips only.
 - **Search space:** n_estimators 100–800 · learning_rate 0.01–0.2 (log) · num_leaves 15–255 (log) · min_child_samples 5–200 (log) · subsample 0.5–1 · colsample_bytree 0.4–1 · reg_lambda 1e-3–10 (log).
@@ -114,6 +119,7 @@ All experiments use LightGBM with 5-fold trip-grouped CV on the **training trips
 ![Optimisation history](results/bayes/optimisation_history.png)
 
 ## 6. Next phase
+
 1. HMM/Viterbi route reconstruction over the candidate arcs, with classifier-only vs HMM comparison.
 2. FastAPI backend and evaluator UI (two-laptop deployment), plus Folium maps of predicted routes.
 3. Final technical report.

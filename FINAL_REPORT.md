@@ -21,6 +21,7 @@ raw trip → per-trip metric projection → candidate arcs (≤10 within 80 m)
 ```
 
 The problem is framed as **candidate ranking**:
+
 - One row per (GPS point, candidate arc), labelled 1 if the candidate is the reference arc.
 - The classifier scores every candidate.
 - The HMM then picks one candidate per point, taking road connectivity into account.
@@ -48,6 +49,7 @@ The problem is framed as **candidate ranking**:
 | Median distance GPS → reference route | 4.6 m | 4.7 m |
 
 **What each file means, and how the files relate.**
+
 - `.track` holds the GPS fixes: longitude, latitude, time.
 - `.nodes` holds the road-network nodes (longitude, latitude); the row index is the node id.
 - `.arcs` holds directed road segments as (from node, to node); the row index is the arc id. A two-way street therefore appears as **two arcs**.
@@ -55,6 +57,7 @@ The problem is framed as **candidate ranking**:
 - A GPS row does **not** correspond to a route row: one arc usually spans many fixes.
 
 **Patterns observed**
+
 1. **Each trip ships its own road network.** All 90 `.arcs` files are different, so every step (indexing, features, HMM) works per trip.
 2. **Trips are spread worldwide:** latitude −34.6° to 61.7°, longitude −100.4° to 137.2°. One global planar projection would distort distances. We therefore use a **local equirectangular projection centred on each trip**, which has under 0.1 % error at city scale, far below GPS noise. Plain Euclidean distance in degrees would be wrong: one degree of longitude shrinks with cos(latitude).
 3. **Gaps and spikes:**
@@ -125,6 +128,7 @@ All experiments use LightGBM with 5-fold trip-grouped CV on the **training trips
 ![Feature selection](results/feature_selection/feature_selection.png)
 
 **Findings and decision**
+
 - **Direction features are essential.** Without them the model can't separate the two directions of a two-way road (identical geometry), and Top-1 collapses by 27 points.
 - Removing distance features alone costs little, because the temporal-context features also encode distance and are correlated with them. They are still kept, since they are the top-ranked features.
 - `dt_prev` adds nothing (+0.0006, within the ±0.013 fold standard deviation), and `head_cos` duplicates `head_diff`.
@@ -136,11 +140,13 @@ All experiments use LightGBM with 5-fold trip-grouped CV on the **training trips
 ## 3. Model experimentation and comparison
 
 **Protocol** (`scripts/03_train_models.py`, `pathsnap/modeling.py`)
+
 - **5-fold GroupKFold by trip** on the 80 training trips, so no trip appears in both a training and a validation fold.
 - Every 3rd GPS point is used (477,737 candidate rows, 12.9 % positive), because consecutive 1 Hz fixes are nearly duplicates.
 - The model is then refit on all training trips and evaluated on **all labelled points of the 10 student-test trips** (151,933 rows).
 
 **Metrics**
+
 - *Macro F1*: binary candidate classification (correct arc vs not) at threshold 0.5, averaged over both classes. Macro averaging matters because only about 13 % of rows are positive.
 - *Top-1 accuracy*: the share of GPS points whose highest-scoring candidate is the reference arc. This is the **primary route-matching metric**.
 - *Log loss*: probability quality, which matters because the HMM uses the probabilities as emissions.
@@ -165,6 +171,7 @@ All experiments use LightGBM with 5-fold trip-grouped CV on the **training trips
 ![Model comparison](results/models/model_comparison.png)
 
 **Model selection: LightGBM.**
+
 1. Its CV Macro F1 (0.9367) is within one fold standard deviation of the best, Random Forest (0.9376 ± 0.010), so the two are statistically tied on CV.
 2. It is best on every student-test metric: Top-1, Macro F1, log loss and continuity.
 3. It has the best-calibrated probabilities (lowest log loss), and those feed the HMM directly.
@@ -177,6 +184,7 @@ The **primary selection metric** is CV Macro F1, backed up by student-test Top-1
 "Train F1" below is the Macro F1 on the training folds (first 200k rows of each fold), averaged over folds. It is compared with CV F1 to judge over- or underfitting.
 
 #### M1 – Logistic Regression
+
 - **Why suitable:** most features are monotone signals (closer is better, a smaller heading difference is better), which a linear log-odds model represents well. It gives calibrated probabilities and is a good baseline.
 - **Strengths / limitations:** fastest model (1 s fit) and interpretable. It cannot model interactions, for example "heading matters only when speed is high", nor thresholds such as "the projection falls past the arc end".
 - **Hyperparameters:** StandardScaler; L2 penalty, C = 1.0; lbfgs, max_iter 2000.
@@ -185,6 +193,7 @@ The **primary selection metric** is CV Macro F1, backed up by student-test Top-1
 - **Over/underfitting:** train F1 0.9304 vs CV F1 0.9318, essentially equal. The model has **no variance problem but is capacity-limited (mild underfitting)**: every nonlinear model with interactions beats it on CV.
 
 #### M2 – Gaussian Naive Bayes
+
 - **Why suitable:** a very cheap generative baseline that tests whether the features are informative on their own.
 - **Strengths / limitations:** trains in 0.1 s. It assumes the features are independent and Gaussian, which is badly violated here: `dist`, `dist_ratio`, `dist_minus_min` and `dist_win_mean` are strongly correlated, and distances are skewed.
 - **Hyperparameters:** defaults (var_smoothing 1e-9).
@@ -193,6 +202,7 @@ The **primary selection metric** is CV Macro F1, backed up by student-test Top-1
 - **Over/underfitting:** train 0.8543 vs CV 0.8684, a clear **underfit**. Counting correlated evidence several times makes it **overconfident**: its log loss is 8× LightGBM's, and its precision is low because many wrong candidates get high probability. This makes it unsuitable as an HMM emission model.
 
 #### M3 – K-Nearest Neighbours
+
 - **Why suitable:** similar feature patterns, such as "close, aligned, consistently near", should share labels. KNN needs no assumption about the shape of the decision boundary.
 - **Strengths / limitations:** simple and non-parametric. It needs feature scaling, every scaled feature counts equally in the distance metric (uninformative features add noise), and prediction is the slowest of all models (1.13 ms per point). We had to subsample to 150k training rows to keep CV under 4 minutes.
 - **Hyperparameters:** StandardScaler; k = 25; distance weighting; Euclidean metric.
@@ -201,6 +211,7 @@ The **primary selection metric** is CV Macro F1, backed up by student-test Top-1
 - **Over/underfitting:** **train F1 1.000 vs CV 0.9289, clear overfitting.** With distance weighting each training row is its own nearest neighbour, so the model memorises the training data. Its probabilities are also coarse (multiples of the vote weights), which explains the second-worst log loss.
 
 #### M4 – Decision Tree
+
 - **Why suitable:** learns threshold rules directly, for example "dist_minus_min < x and head_diff_long < y", and handles mixed feature scales without scaling.
 - **Strengths / limitations:** interpretable and the fastest at inference (0.0005 ms per point). A single tree has high variance, and its probabilities are piecewise constant.
 - **Hyperparameters:** max_depth 12, min_samples_leaf 50 (both limit variance); Gini criterion.
@@ -209,6 +220,7 @@ The **primary selection metric** is CV Macro F1, backed up by student-test Top-1
 - **Over/underfitting:** train 0.9413 vs CV 0.9321, a small gap. Depth and leaf limits keep it from overfitting, but a single tree can't match the ensembles (−0.005 CV F1 vs RF).
 
 #### M5 – Random Forest
+
 - **Why suitable:** averaging many decorrelated deep trees reduces the variance that M4 showed, while keeping nonlinear rules and interactions.
 - **Strengths / limitations:** **best CV Macro F1 (0.9376)** and the lowest fold standard deviation (0.010), so it is the most stable across trips. However, it is the slowest to train (143 s on 8 cores) and the largest artifact (35 MB).
 - **Hyperparameters:** 200 trees, max_depth 18, min_samples_leaf 5, bootstrap, √features per split.
@@ -217,6 +229,7 @@ The **primary selection metric** is CV Macro F1, backed up by student-test Top-1
 - **Over/underfitting:** train 0.9637 vs CV 0.9376. The gap (0.026) shows some memorisation by the deep trees, but CV is the best of all models, so the ensemble averaging controls it.
 
 #### M6 – HistGradientBoosting
+
 - **Why suitable:** boosting fits residual errors one after another, so it focuses on the hard, ambiguous candidates (two-way roads, parallel streets). The histogram binning makes it fast on 478k rows.
 - **Strengths / limitations:** strong accuracy at a 2.8 s fit. Default regularisation only; it was not tuned.
 - **Hyperparameters:** max_iter 300, learning_rate 0.1, max_leaf_nodes 31. `early_stopping='auto'` switches early stopping **on** for more than 10,000 rows: 10 % validation split, patience 10.
@@ -225,6 +238,7 @@ The **primary selection metric** is CV Macro F1, backed up by student-test Top-1
 - **Over/underfitting:** train 0.9466 vs CV 0.9353, a moderate and healthy gap.
 
 #### M7 – LightGBM (selected)
+
 - **Why suitable:** the same boosting idea as M6, with leaf-wise growth and many regularisation controls. It is well suited to tabular, heterogeneous features, and it gives well-calibrated probabilities for the HMM.
 - **Strengths / limitations:** best on student-test and fast to train. Leaf-wise trees with 63 leaves can overfit, which is why we tuned it (Section 4). Fold standard deviation is the highest of the tree models (0.013).
 - **Hyperparameters (untuned):** n_estimators 400, learning_rate 0.05, num_leaves 63, min_child_samples 20, no subsampling, reg_lambda 0.
@@ -233,6 +247,7 @@ The **primary selection metric** is CV Macro F1, backed up by student-test Top-1
 - **Over/underfitting:** train 0.9666 vs CV 0.9367, a gap of 0.03. It fits the training trips more closely than the CV trips. Even so, it generalises best to the unseen student-test trips, so the extra capacity captures real structure rather than just noise.
 
 #### M8 – Multi-layer perceptron
+
 - **Why suitable:** learns smooth nonlinear combinations of the scaled features, and the network's output is a probability.
 - **Strengths / limitations:** competitive student-test Top-1 (0.8947) and good continuity (0.9529). Slow to train (76 s), sensitive to scaling and initialisation. Fold standard deviation is 0.013, similar to LightGBM.
 - **Hyperparameters:** StandardScaler; hidden layers (64, 32), ReLU; Adam; L2 alpha 1e-4; batch 200; early stopping on a 10 % validation split (patience 10); max_iter 60.
@@ -283,6 +298,7 @@ The confusion matrices show the precision/recall trade-off at threshold 0.5. Gau
 | LightGBM tuned | **0.9386** ± 0.012 | 0.8945 | 0.9369 | **0.0677** | 0.087 |
 
 **Interpretation:**
+
 - Tuning improved the **objective** and every CV metric: CV Top-1 0.8889 → 0.8908, CV log loss 0.0774 → 0.0732, and a smaller fold standard deviation.
 - The gain (+0.0019) is **smaller than the fold standard deviation**, and on the student-test trips the tuned model is slightly **worse** in Top-1 (−0.46 pt) and 2.6× slower at inference.
 - The best random start-up trial already reached 0.9380, and TPE added only 0.0006 on top. The objective surface is flat near the defaults, so we see **diminishing returns**.
@@ -310,6 +326,7 @@ The confusion matrices show the precision/recall trade-off at threshold 0.5. Gau
 **Viterbi:** δ_t(b) = max over a of [δ_{t−1}(a) + log P(b|a)] + α·log p̂_t(b), with back-pointers. Scores are re-centred every step for numerical stability. This is linear in the number of points and quadratic in the number of candidates (≤ 100 pairs per step).
 
 **Decoder tuning without leakage:**
+
 - α ∈ {0.5, 1, 2} × β ∈ {2, 5, 10, 20, 50} m were grid-searched on **out-of-fold** LightGBM probabilities of the 80 training trips (5-fold by trip, tuned parameters).
 - **Best: α = 0.5, β = 10 m.** Out-of-fold Top-1 rises from 0.8972 (classifier only) to 0.9262 (HMM) (`decoder_grid_oof_train.csv`).
 - α < 1 means the decoder should **lean on the road network more than on the classifier**.
@@ -336,11 +353,13 @@ The confusion matrices show the precision/recall trade-off at threshold 0.5. Gau
 ![Classifier-only vs classifier + HMM](results/hmm/hmm_vs_classifier.png)
 
 **Where the HMM helps:**
+
 - It removes isolated jumps onto side streets and parallel roads (continuity 0.954 → 0.979).
 - It fixes direction flips, since a sudden switch to the reverse arc implies a U-turn whose d_net doesn't match d_gc.
 - Route precision rises from 0.914 to 0.963.
 
 **Where it doesn't help, and why:**
+
 - **Route recall barely changes (0.896 → 0.906).** This is a property of the data rather than of the decoder. Some route arcs are so short that the vehicle crosses them between two 1 Hz fixes, so no GPS point is ever labelled with them. Even perfect per-point labels would reach only **0.905 mean recall**, and the HMM already sits at that ceiling. Recovering these arcs needs **path interpolation** (inserting the shortest path between consecutive matched arcs), which would be a natural extension.
 - **Trip 77 is still the weakest (0.837).** Of its 638 remaining errors, **77 % choose the reverse-direction twin of the correct arc**, 12 % are the neighbouring arc at a segment boundary, and 11 % are other arcs. Trip 65 shows the same pattern (59 % reverse direction). In the window shown below (points 2263–2563), 122 of the 124 points where the classifier and HMM disagree are such direction twins. The HMM is right on 85.3 % of the window's points, the classifier alone on 52.7 %. The GPS there is a dense scatter on a short two-way road, so the heading features are unreliable. Direction ambiguity on two-way roads is our main remaining error source.
 
@@ -349,6 +368,7 @@ The confusion matrices show the precision/recall trade-off at threshold 0.5. Gau
 ## 6. Geographical visualisation (Folium)
 
 `pathsnap/viz.py`. One interactive map per student-test trip is in `results/maps/student_test_*.html`, plus EDA and focus maps. Every map has:
+
 - **Layers:** road network near the track (grey), reference route (green, wide), classifier-only top-1 arcs (orange, toggleable), HMM/Viterbi prediction (magenta), raw GPS points (blue dots with timestamp tooltips), start and end markers.
 - A legend and a **layer control**.
 - An extent fitted to the trajectory.
@@ -362,6 +382,7 @@ The confusion matrices show the precision/recall trade-off at threshold 0.5. Gau
 ## 7. API, UI and deployment
 
 **Laptop 1, API** (`api/main.py`, FastAPI + uvicorn, `uvicorn api.main:app --host 0.0.0.0 --port 8000`):
+
 - At start-up it loads `artifacts/final_model.joblib` (tuned LightGBM + feature list) and `artifacts/hmm_config.json` (α, β, gap thresholds). It lists the evaluation trips in `PATHSNAP_EVAL_DIR`.
 - `GET /health` reports the model and decoder settings. `GET /trips` returns the trip ids. `POST /predict {"trip_id"}` runs the full pipeline:
   1. load the trip **without** its route
@@ -379,23 +400,16 @@ All 10 student-test trips were tested through the API, at 0.2–3.3 s per reques
 
 ![UI – trip 00000007](results/report_figures/ui_trip_00000007.png)
 
-**API console log** (captured from the running server during testing):
+**API console (CMD) receiving requests from the UI.** This is a screenshot of the CMD window running `run_api.bat`, taken while the UI requested student-test trips 7, 77 and 56. Each `POST /predict` is logged with the trip, the number of GPS points, the server-side Top-1 (HMM and classifier-only), the route continuity and the processing time. For this capture the API and the UI ran on the same laptop. At evaluation, the API runs on Laptop 1, the UI on Laptop 2, and the log appears in the same way on Laptop 1.
 
-```
-2026-11-18 11:55:56,497 | INFO | GET /trips -> 10 trips
-2026-11-18 11:55:56,503 | INFO | POST /predict trip=00000056  -> running pipeline
-2026-11-18 11:55:59,926 | INFO | POST /predict trip=00000056  done | gps=3958 | top1(HMM)=0.9672 | top1(clf)=0.9225 | continuity=0.9674 | 3.42s
-2026-11-18 11:56:03,079 | INFO | POST /predict trip=00000007  -> running pipeline
-2026-11-18 11:56:03,739 | INFO | POST /predict trip=00000007  done | gps=1354 | top1(HMM)=0.9941 | top1(clf)=0.9365 | continuity=1.0000 | 0.66s
-```
-
-*[Add the screenshot of the API terminal on Laptop 1, receiving requests from Laptop 2, here on evaluation day.]*
+![API CMD console receiving UI requests](results/report_figures/api_cmd_log.png)
 
 ---
 
 ## 8. Leakage controls, limitations and conclusions
 
 **Leakage controls**
+
 - All CV is grouped by trip.
 - Model hyperparameters were tuned on training-trip CV only. Decoder parameters were tuned on out-of-fold training predictions only.
 - Student-test data was used only for comparison, and the evaluator partition was never opened.
@@ -403,6 +417,7 @@ All 10 student-test trips were tested through the API, at 0.2–3.3 s per reques
 - No predictions are hard-coded, and reference routes are read only for scoring.
 
 **Limitations**
+
 - Labels come from the supplied routes through our alignment, so they are not independent ground truth.
 - 1.2 % of training points have no correct candidate.
 - Direction ambiguity on two-way roads causes most remaining errors.
