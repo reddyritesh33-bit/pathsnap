@@ -9,5 +9,5 @@ if "%~1"=="" (
 set PATHSNAP_EVAL_DIR=%~1
 cd /d "%~dp0"
 echo Serving trips from %PATHSNAP_EVAL_DIR%
-echo Other laptops connect to http://<this-laptop-IP>:8000   (find the IP with: ipconfig)
+echo Other laptops connect to http://^<this-laptop-IP^>:8000   (find the IP with: ipconfig)
 python -m uvicorn api.main:app --host 0.0.0.0 --port 8000
