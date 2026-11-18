@@ -1,0 +1,9 @@
+{
+  "alpha": 0.5,
+  "beta": 10.0,
+  "gap_s": 60.0,
+  "gap_m": 500.0,
+  "tuned_on": "out-of-fold classifier probabilities, 80 training trips",
+  "oof_top1_hmm": 0.9261612249945255,
+  "oof_top1_classifier_only": 0.8971823150615899
+}

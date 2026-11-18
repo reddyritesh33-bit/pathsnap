@@ -1,8 +1,9 @@
 """Bayesian hyperparameter optimisation (Optuna TPE) for the selected model.
 
 Objective : mean 5-fold GroupKFold (by trip) Macro F1 on the 80 training trips.
-Outputs   : results/bayes/trials.csv, optimisation plots, tuned-vs-untuned table and
-            artifacts/final_model.joblib (tuned model).
+Outputs   : results/bayes/trials.csv, optimisation plots, tuned-vs-untuned table,
+            artifacts/final_model.joblib, cache/oof_train.pkl (out-of-fold
+            probabilities used to tune the HMM decoder without leakage).
 """
 import json
 import os
@@ -16,10 +17,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import optuna
 import pandas as pd
+from sklearn.model_selection import GroupKFold
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pathsnap.candidates import FEATURES  # noqa: E402
-from pathsnap.config import ARTIFACTS, RESULTS, SEED  # noqa: E402
+from pathsnap.config import ARTIFACTS, CACHE_DIR, RESULTS, SEED  # noqa: E402
 from pathsnap.metrics import classifier_metrics  # noqa: E402
 from pathsnap.modeling import SUBSAMPLE_EVERY, grouped_cv, load_partition, make_model, predict_proba  # noqa: E402
 
@@ -103,6 +105,17 @@ def main():
     print(cmp.T)
     joblib.dump({"model": tuned_model, "features": FEATURES, "params": best},
                 os.path.join(ARTIFACTS, "final_model.joblib"), compress=3)
+
+    # out-of-fold probabilities on ALL labelled+unlabelled train rows (for HMM tuning)
+    full = load_partition("train", labelled_only=False)
+    oof = np.zeros(len(full))
+    lab = full["gt_arc"] >= 0
+    for tr_trips, va_trips in GroupKFold(5).split(full, groups=full["trip"]):
+        va_set = set(full["trip"].iloc[va_trips])
+        tr_mask = lab & ~full["trip"].isin(va_set) & (full["obs"] % SUBSAMPLE_EVERY == 0)
+        m = make_model(MODEL, best).fit(full.loc[tr_mask, FEATURES].to_numpy(np.float32), full.loc[tr_mask, "y"])
+        oof[va_trips] = predict_proba(m, full.iloc[va_trips][FEATURES].to_numpy(np.float32))
+    full[["trip", "obs", "arc", "rank", "t_proj", "gt_arc", "y"]].assign(p=oof).to_pickle(os.path.join(CACHE_DIR, "oof_train.pkl"))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,43 @@
+precomputed transitions for 80 train trips in 75s
+{'alpha': 0.5, 'beta': 2.0, 'oof_top1': np.float64(0.9133487161182281), 'oof_continuity': np.float64(0.9682094386616751)}
+{'alpha': 0.5, 'beta': 5.0, 'oof_top1': np.float64(0.9245015785667284), 'oof_continuity': np.float64(0.971547581827289)}
+{'alpha': 0.5, 'beta': 10.0, 'oof_top1': np.float64(0.9261612249945255), 'oof_continuity': np.float64(0.9724018574791422)}
+{'alpha': 0.5, 'beta': 20.0, 'oof_top1': np.float64(0.9228897281190779), 'oof_continuity': np.float64(0.9728210702538466)}
+{'alpha': 0.5, 'beta': 50.0, 'oof_top1': np.float64(0.9203059442343232), 'oof_continuity': np.float64(0.9718516324160535)}
+{'alpha': 1.0, 'beta': 2.0, 'oof_top1': np.float64(0.9210381977701896), 'oof_continuity': np.float64(0.9707712285599008)}
+{'alpha': 1.0, 'beta': 5.0, 'oof_top1': np.float64(0.9256929987176588), 'oof_continuity': np.float64(0.9724512746350932)}
+{'alpha': 1.0, 'beta': 10.0, 'oof_top1': np.float64(0.9221974092811411), 'oof_continuity': np.float64(0.9728967888169191)}
+{'alpha': 1.0, 'beta': 20.0, 'oof_top1': np.float64(0.9203379502494384), 'oof_continuity': np.float64(0.9721616308950669)}
+{'alpha': 1.0, 'beta': 50.0, 'oof_top1': np.float64(0.9185026353928022), 'oof_continuity': np.float64(0.9701687016590045)}
+{'alpha': 2.0, 'beta': 2.0, 'oof_top1': np.float64(0.9232861470847048), 'oof_continuity': np.float64(0.9720362453328721)}
+{'alpha': 2.0, 'beta': 5.0, 'oof_top1': np.float64(0.9204681764488972), 'oof_continuity': np.float64(0.9728135619563055)}
+{'alpha': 2.0, 'beta': 10.0, 'oof_top1': np.float64(0.9187051400076619), 'oof_continuity': np.float64(0.9720750233760229)}
+{'alpha': 2.0, 'beta': 20.0, 'oof_top1': np.float64(0.917257013735916), 'oof_continuity': np.float64(0.9706033466954281)}
+{'alpha': 2.0, 'beta': 50.0, 'oof_top1': np.float64(0.9147388973285956), 'oof_continuity': np.float64(0.9683892178635011)}
+chosen decoder config {'alpha': 0.5, 'beta': 10.0, 'gap_s': 60.0, 'gap_m': 500.0, 'tuned_on': 'out-of-fold classifier probabilities, 80 training trips', 'oof_top1_hmm': 0.9261612249945255, 'oof_top1_classifier_only': 0.8971823150615899}
+{'trip': '00000000', 'method': 'classifier only', 'n_obs': 2503, 'seconds': 1.087472915649414, 'top1_acc': 0.9540551338393928, 'continuity': 0.9820143884892086, 'route_precision': 0.8769230769230769, 'route_recall': 0.9553072625698324, 'route_f1': 0.9144385026737969} 
+ {'trip': '00000000', 'method': 'classifier + HMM', 'n_obs': 2503, 'seconds': 1.087472915649414, 'top1_acc': 0.9632441070715142, 'continuity': 0.9960031974420464, 'route_precision': 0.9453551912568307, 'route_recall': 0.9664804469273743, 'route_f1': 0.9558011049723757}
+{'trip': '00000007', 'method': 'classifier only', 'n_obs': 1354, 'seconds': 0.45168304443359375, 'top1_acc': 0.9364844903988183, 'continuity': 0.9985218033998522, 'route_precision': 0.983739837398374, 'route_recall': 0.983739837398374, 'route_f1': 0.983739837398374} 
+ {'trip': '00000007', 'method': 'classifier + HMM', 'n_obs': 1354, 'seconds': 0.45168304443359375, 'top1_acc': 0.9940915805022157, 'continuity': 1.0, 'route_precision': 0.983739837398374, 'route_recall': 0.983739837398374, 'route_f1': 0.983739837398374}
+{'trip': '00000009', 'method': 'classifier only', 'n_obs': 1049, 'seconds': 0.7259399890899658, 'top1_acc': 0.8894184938036225, 'continuity': 0.9122137404580153, 'route_precision': 0.9033078880407125, 'route_recall': 0.8275058275058275, 'route_f1': 0.8637469586374695} 
+ {'trip': '00000009', 'method': 'classifier + HMM', 'n_obs': 1049, 'seconds': 0.7259399890899658, 'top1_acc': 0.9180171591992373, 'continuity': 0.9484732824427481, 'route_precision': 0.9396325459317585, 'route_recall': 0.8344988344988346, 'route_f1': 0.8839506172839507}
+{'trip': '00000040', 'method': 'classifier only', 'n_obs': 2995, 'seconds': 1.209770917892456, 'top1_acc': 0.9499165275459098, 'continuity': 0.9802939211756847, 'route_precision': 0.9367088607594937, 'route_recall': 0.9579288025889967, 'route_f1': 0.9471999999999999} 
+ {'trip': '00000040', 'method': 'classifier + HMM', 'n_obs': 2995, 'seconds': 1.209770917892456, 'top1_acc': 0.9639398998330551, 'continuity': 0.9956579826319305, 'route_precision': 0.9834437086092715, 'route_recall': 0.9611650485436893, 'route_f1': 0.972176759410802}
+{'trip': '00000052', 'method': 'classifier only', 'n_obs': 262, 'seconds': 0.17161846160888672, 'top1_acc': 0.9809160305343512, 'continuity': 0.9540229885057471, 'route_precision': 0.9512195121951219, 'route_recall': 0.8210526315789474, 'route_f1': 0.8813559322033899} 
+ {'trip': '00000052', 'method': 'classifier + HMM', 'n_obs': 262, 'seconds': 0.17161846160888672, 'top1_acc': 1.0, 'continuity': 0.9616858237547893, 'route_precision': 1.0, 'route_recall': 0.8631578947368421, 'route_f1': 0.9265536723163842}
+{'trip': '00000056', 'method': 'classifier only', 'n_obs': 3958, 'seconds': 1.938392162322998, 'top1_acc': 0.9225298450596902, 'continuity': 0.9226686884003032, 'route_precision': 0.9438877755511023, 'route_recall': 0.8820224719101124, 'route_f1': 0.9119070667957406} 
+ {'trip': '00000056', 'method': 'classifier + HMM', 'n_obs': 3958, 'seconds': 1.938392162322998, 'top1_acc': 0.967233934467869, 'continuity': 0.9673995451099318, 'route_precision': 0.977482088024565, 'route_recall': 0.8941947565543071, 'route_f1': 0.9339853300733497}
+{'trip': '00000065', 'method': 'classifier only', 'n_obs': 768, 'seconds': 0.5883738994598389, 'top1_acc': 0.87109375, 'continuity': 0.9674054758800521, 'route_precision': 0.9219858156028369, 'route_recall': 0.896551724137931, 'route_f1': 0.9090909090909091} 
+ {'trip': '00000065', 'method': 'classifier + HMM', 'n_obs': 768, 'seconds': 0.5883738994598389, 'top1_acc': 0.8919270833333334, 'continuity': 0.9869621903520208, 'route_precision': 0.9710144927536232, 'route_recall': 0.9241379310344827, 'route_f1': 0.9469964664310954}
+{'trip': '00000076', 'method': 'classifier only', 'n_obs': 1486, 'seconds': 1.6977109909057617, 'top1_acc': 0.9266487213997309, 'continuity': 0.927946127946128, 'route_precision': 0.88, 'route_recall': 0.8823529411764706, 'route_f1': 0.8811748998664888} 
+ {'trip': '00000076', 'method': 'classifier + HMM', 'n_obs': 1486, 'seconds': 1.6977109909057617, 'top1_acc': 0.9710632570659489, 'continuity': 0.9737373737373738, 'route_precision': 0.9455587392550143, 'route_recall': 0.8823529411764706, 'route_f1': 0.9128630705394192}
+{'trip': '00000077', 'method': 'classifier only', 'n_obs': 3911, 'seconds': 1.8045201301574707, 'top1_acc': 0.7560726156993096, 'continuity': 0.9639386189258312, 'route_precision': 0.8222222222222222, 'route_recall': 0.9664179104477612, 'route_f1': 0.8885077186963979} 
+ {'trip': '00000077', 'method': 'classifier + HMM', 'n_obs': 3911, 'seconds': 1.8045201301574707, 'top1_acc': 0.8368703656353874, 'continuity': 0.9923273657289002, 'route_precision': 0.9059233449477352, 'route_recall': 0.9701492537313433, 'route_f1': 0.9369369369369369}
+{'trip': '00000091', 'method': 'classifier only', 'n_obs': 874, 'seconds': 0.5323326587677002, 'top1_acc': 0.9073226544622426, 'continuity': 0.9255441008018328, 'route_precision': 0.9238578680203046, 'route_recall': 0.7844827586206896, 'route_f1': 0.8484848484848484} 
+ {'trip': '00000091', 'method': 'classifier + HMM', 'n_obs': 874, 'seconds': 0.5323326587677002, 'top1_acc': 0.9290617848970252, 'continuity': 0.9713631156930126, 'route_precision': 0.972972972972973, 'route_recall': 0.7758620689655172, 'route_f1': 0.8633093525179857}
+                  top1_acc  continuity  ...  route_f1   seconds
+method                                  ...                    
+classifier + HMM  0.943545    0.979361  ...  0.931631  1.020782
+classifier only   0.909446    0.953457  ...  0.902965  1.020782
+
+[2 rows x 6 columns]

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PathSnap Evaluator</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root { --bg:#f6f7f9; --panel:#fff; --ink:#1b1f24; --muted:#5f6b7a; --line:#dde2e8; --accent:#d81b60; --gps:#1565c0; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 system-ui, -apple-system, Segoe UI, sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:12px 18px; background:var(--panel); border-bottom:1px solid var(--line); display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0 12px 0 0; }
+  header input { width:260px; padding:6px 8px; border:1px solid var(--line); border-radius:6px; }
+  button { cursor:pointer; border:1px solid var(--line); background:var(--panel); border-radius:6px; padding:6px 10px; font:inherit; }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  main { display:grid; grid-template-columns: 300px 1fr; height:calc(100vh - 58px); }
+  aside { background:var(--panel); border-right:1px solid var(--line); padding:14px; overflow:auto; }
+  #trips { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:14px; }
+  #trips button.sel { outline:2px solid var(--accent); }
+  #map { height:100%; }
+  table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  td, th { padding:4px 6px; border-bottom:1px solid var(--line); text-align:left; }
+  td.num { text-align:right; }
+  .muted { color:var(--muted); font-size:12px; }
+  #status { margin:8px 0; min-height:20px; }
+  .legend { background:#fff; padding:6px 8px; border-radius:6px; font-size:12px; line-height:1.6; }
+  @media (max-width: 760px) { main { grid-template-columns:1fr; grid-template-rows:auto 60vh; height:auto; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>PathSnap evaluator</h1>
+  <label>API URL <input id="api" value="http://localhost:8000"></label>
+  <button id="connect">Load trips</button>
+  <span id="health" class="muted"></span>
+</header>
+<main>
+  <aside>
+    <h3 style="margin-top:0">Evaluation trips</h3>
+    <div id="trips"><span class="muted">Click "Load trips".</span></div>
+    <button class="primary" id="run" disabled>Reconstruct route</button>
+    <div id="status" class="muted"></div>
+    <div id="results"></div>
+    <p class="muted">Ground truth stays on the API server. The UI only receives the predicted route and the server-computed scores.</p>
+  </aside>
+  <div id="map"></div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const map = L.map('map').setView([49.85, 8.6], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, attribution: '&copy; OpenStreetMap'}).addTo(map);
+let layers = L.layerGroup().addTo(map), selected = null;
+const legend = L.control({position: 'bottomright'});
+legend.onAdd = () => { const d = L.DomUtil.create('div', 'legend');
+  d.innerHTML = '<span style="color:#1565c0">&#9679;</span> raw GPS<br><span style="color:#d81b60">&#9473;</span> predicted route (HMM)'; return d; };
+legend.addTo(map);
+
+const api = () => $('#api').value.replace(/\/$/, '');
+const pct = v => v == null ? 'n/a' : (100 * v).toFixed(2) + ' %';
+
+$('#connect').onclick = async () => {
+  try {
+    const h = await (await fetch(api() + '/health')).json();
+    $('#health').textContent = `connected: ${h.model}, alpha=${h.hmm.alpha}, beta=${h.hmm.beta}`;
+    const t = await (await fetch(api() + '/trips')).json();
+    $('#trips').innerHTML = '';
+    t.trips.forEach(id => {
+      const b = document.createElement('button'); b.textContent = id;
+      b.onclick = () => { document.querySelectorAll('#trips button').forEach(x => x.classList.remove('sel'));
+                          b.classList.add('sel'); selected = id; $('#run').disabled = false; };
+      $('#trips').appendChild(b);
+    });
+  } catch (e) { $('#health').textContent = 'cannot reach API: ' + e; }
+};
+
+$('#run').onclick = async () => {
+  if (!selected) return;
+  $('#status').textContent = `Running pipeline for trip ${selected}...`; $('#run').disabled = true;
+  try {
+    const r = await fetch(api() + '/predict', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                                               body: JSON.stringify({trip_id: selected})});
+    if (!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    draw(d); table(d);
+    $('#status').textContent = `Done in ${d.timing_s.request_total}s`;
+  } catch (e) { $('#status').textContent = 'Error: ' + e; }
+  $('#run').disabled = false;
+};
+
+// optional deep link: index.html?api=http://host:8000&trip=00000056 auto-runs a trip
+(async () => {
+  const q = new URLSearchParams(location.search);
+  if (q.get('api')) $('#api').value = q.get('api');
+  if (!q.get('trip')) return;
+  await $('#connect').onclick();
+  const b = [...document.querySelectorAll('#trips button')].find(x => x.textContent === q.get('trip'));
+  if (b) { b.click(); $('#run').onclick(); }
+})();
+
+function draw(d) {
+  layers.clearLayers();
+  d.gps.forEach(p => L.circleMarker(p, {radius: 1.8, color: '#1565c0', weight: 0, fillOpacity: .6}).addTo(layers));
+  d.predicted_route.forEach(l => L.polyline(l, {color: '#d81b60', weight: 3.5, opacity: .9}).addTo(layers));
+  L.marker(d.gps[0]).bindTooltip('start').addTo(layers);
+  map.fitBounds(L.latLngBounds(d.gps).pad(0.05));
+}
+
+function table(d) {
+  const m = d.metrics, h = m.hmm || {}, c = m.classifier_only || {};
+  $('#results').innerHTML = `
+  <h3>Trip ${d.trip_id}</h3>
+  <table>
+    <tr><th></th><th>Classifier</th><th>+ HMM</th></tr>
+    <tr><td>Top-1 accuracy</td><td class="num">${pct(c.top1_accuracy)}</td><td class="num"><b>${pct(h.top1_accuracy)}</b></td></tr>
+    <tr><td>Route continuity</td><td class="num">${pct(m.route_continuity_classifier)}</td><td class="num">${pct(m.route_continuity_hmm)}</td></tr>
+    <tr><td>Route precision</td><td class="num">${pct(c.route_precision)}</td><td class="num">${pct(h.route_precision)}</td></tr>
+    <tr><td>Route recall</td><td class="num">${pct(c.route_recall)}</td><td class="num">${pct(h.route_recall)}</td></tr>
+    <tr><td>Route F1</td><td class="num">${pct(c.route_f1)}</td><td class="num">${pct(h.route_f1)}</td></tr>
+  </table>
+  <p class="muted">${d.n_gps} GPS points, ${d.n_candidates} candidate rows, ${h.n_scored_obs ?? '-'} scored points.<br>
+  Timing: features ${d.timing_s.candidates_features}s, classifier ${d.timing_s.classifier}s, Viterbi ${d.timing_s.hmm_viterbi}s</p>`;
+}
+</script>
+</body>
+</html>
