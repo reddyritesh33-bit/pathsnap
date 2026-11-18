@@ -7,7 +7,7 @@ raw trip ─► candidate arcs (KD-tree, r=80 m, K≤10) ─► 20 features per 
         ─► classifier P(arc is correct) ─► HMM / Viterbi over candidates ─► route
 ```
 
-**Reports:** `PHASE1_REPORT.pdf` (review 1) · `FINAL_REPORT.pdf` (final technical report).
+**Reports:** `PHASE1_REPORT.pdf` (review 1) · `PHASE2_REPORT.pdf` (review 2: pipeline, tuning, HMM, two-laptop API) · `FINAL_REPORT.pdf` (final technical report).
 
 **Student-test results (10 trips):** tuned LightGBM Top-1 0.895 → with HMM **0.935**; route continuity 0.953 → **0.979**.
 
@@ -32,6 +32,7 @@ raw trip ─► candidate arcs (KD-tree, r=80 m, K≤10) ─► 20 features per 
 | `scripts/06_collect_results.py` | collects all result tables into `results/RESULTS_SUMMARY.md` |
 | `scripts/07_report_figures.py` | confusion-matrix grid, feature importance, UI and map screenshots |
 | `scripts/md_to_pdf.py` | Markdown report → PDF |
+| `scripts/08_phase2_diagrams.py` | pipeline, two-laptop flow and HMM trellis diagrams |
 | `run_api.bat`, `run_ui.bat` | one-click start for Laptop 1 / Laptop 2 (Windows) |
 | `api/main.py` | FastAPI backend (Laptop 1) |
 | `ui/index.html`, `ui/serve.py` | evaluator UI (Laptop 2) |
