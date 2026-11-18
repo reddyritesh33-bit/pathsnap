@@ -1,0 +1,5 @@
+k,features,n_features,cv_macro_f1,cv_macro_f1_std,cv_top1,cv_log_loss,seconds
+5,dist_minus_min head_diff_long dist_win_rank arc_len t_clipped,5,0.9301593275744894,0.011733527328289044,0.880067257233288,0.08895216918567198,20.852444648742676
+10,dist_minus_min head_diff_long dist_win_rank arc_len t_clipped dist_win_mean speed t_proj in_degree dist_ratio,10,0.9350901729648562,0.010909935612477986,0.8879786384759484,0.08051440054105964,21.871236085891724
+15,dist_minus_min head_diff_long dist_win_rank arc_len t_clipped dist_win_mean speed t_proj in_degree dist_ratio has_reverse out_degree head_diff n_cand dist,15,0.9366072264398788,0.012116928074348636,0.8891493316948663,0.07733054966475938,27.46732807159424
+20,dist_minus_min head_diff_long dist_win_rank arc_len t_clipped dist_win_mean speed t_proj in_degree dist_ratio has_reverse out_degree head_diff n_cand dist head_cos dist_prev dist_next rank dt_prev,20,0.9366557681579906,0.012926760503608758,0.8886700483249982,0.07812119689100787,29.941744327545166

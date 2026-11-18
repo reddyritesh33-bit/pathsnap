@@ -1,0 +1,16 @@
+,,0
+head_diff,head_cos,-0.9999999999998804
+dist,dist_minus_min,0.932867240167274
+dist_minus_min,dist_ratio,0.9075908245495454
+rank,dist_win_rank,0.891321027480095
+dist,dist_win_mean,0.8904361070047877
+dist_minus_min,dist_win_mean,0.8693090939579214
+dist_prev,dist_win_mean,0.8630888868433462
+dist_next,dist_win_mean,0.8607473723966874
+dist,dist_prev,0.852986517697615
+dist,dist_next,0.8528457499451023
+head_diff,head_diff_long,0.8279423704147066
+head_cos,head_diff_long,-0.8279423696482533
+dist_minus_min,dist_prev,0.8227999872252209
+dist_minus_min,dist_next,0.8222624839885602
+dist,dist_ratio,0.8095178295129741

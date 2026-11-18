@@ -1,0 +1,16 @@
+{
+  "best_params": {
+    "n_estimators": 600,
+    "learning_rate": 0.014006991042428668,
+    "num_leaves": 221,
+    "min_child_samples": 12,
+    "subsample": 0.6230590887084679,
+    "subsample_freq": 1,
+    "colsample_bytree": 0.48583383369193717,
+    "reg_lambda": 0.17083764619132746
+  },
+  "best_cv_macro_f1": 0.9385512334113342,
+  "n_trials": 30,
+  "search_seconds": 1546.486221075058,
+  "sampler": "TPE(seed=42, n_startup_trials=10)"
+}
