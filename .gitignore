@@ -1,0 +1,8 @@
+cache/
+__pycache__/
+*.pyc
+.venv/
+# raw data is distributed by the organisers, do not commit
+data/
+.claude/
+artifacts/
